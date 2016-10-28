@@ -3,7 +3,7 @@ import java.util.Collections;
 import java.util.HashMap;
 
 /**
- * Takes k indistinguishable n-sided dice, and returns k-1 indistinguishable dice.
+ * Takes k indistinguishable n-sided dice, and returns k-1 indistinguishable dice. Precondition: k divides n.
  *
  * Summary:
  * You plot each die modulo n (on a circle), and for each die, you take the clockwise distances with every other die

@@ -779,14 +779,9 @@ public:
     Move move(const Board& board) {
         auto begin = time(0);
         MonteCarloNode root;
-//        LOG << 0 << "/" << sims_/ 10000 << endl;
          LOG << 0 << "/" << timeLimit_ << endl;
 
         for (int i = 0; i < sims_; i++) {
-//            if ((i + 1) % 10000 == 0) {
-//                unwrite(cout, 1);
-//                LOG << (i + 1) / 10000 << "/" << sims_/ 10000 << endl;
-//            }
             if ((i + 1) % 10000 == 0) {
                 auto end = time(0);
                 if (end - begin >= timeLimit_) {

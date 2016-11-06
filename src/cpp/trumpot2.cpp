@@ -820,9 +820,9 @@ public:
 
 int main() {
     auto p = make_shared<CommandLinePlayer>();
-    auto q = make_shared<MonteCarloPlayer>(1000000, 5);
+    auto q = make_shared<MonteCarloPlayer>(1000000, 10);
     auto r = make_shared<SimulationPlayer>();
-    vector<shared_ptr<Player>> players{shared_ptr<Player>(q), shared_ptr<Player>(r)};
+    vector<shared_ptr<Player>> players{shared_ptr<Player>(p), shared_ptr<Player>(q)};
 //    Hand h {{{1, 2}, {2, 2}, {3, 2}, {4, 2}, {5, 2}, {6, 2}, {7, 2}, {8, 2}, {9, 2}, {10, 2}, {11, 2}, {12, 2}, {13, 2}}};
     Hand h {{{1, 2}, {2, 2}, {3, 2}, {4, 2}, {5, 2}, {6, 2}, {7, 2}, {8, 2}, {9, 2}, {10, 2}}};
 

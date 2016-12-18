@@ -21,8 +21,6 @@ import java.util.*;
  *
  * Conclusion: The ratio of the expected final position and x starts as 1.5 for small x and then goes to 2.
  * When plotted against each other, the curve is convex, and looks almost like a half circle (but not exactly).
- *
- * Uncomment out the commented code in main to get the points in tabular format.
  */
 public class AverageOfRandomWalk {
     public static class Avg {

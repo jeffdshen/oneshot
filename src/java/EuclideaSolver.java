@@ -4,9 +4,9 @@ import java.awt.image.BufferedImage;
 import java.util.*;
 
 /**
- * DFS for compass and straight-edge drawings
+ * DFS for compass and straight-edge drawings.
  *
- * Circle, line, points. Given any points on a circle/line, can find a random point in between
+ * Circle, line, points.
  */
 
 class Point {
@@ -68,11 +68,14 @@ class GeoUtils {
     double errorSqrt;
     double errorSq;
     double errorSix;
-    // Notes on error:
-    // if |a - b| = e, and a, b > 0
-    // a^2 - b^2 = (a - b)(a + b) = e * (a + b), which we can approximate as e * 2a, i.e. "e" = (a^2 - b^2) / 2a
-    // The error in the error is e - "e" = (2a(a-b) - (a^2-b^2)) / 2a = (a - b)^2 / 2a = e^2 / 2a < e/2 for a > e.
 
+    /**
+     * Constructs a geometry utility object. Point comparison is such that (a, b) and (a + e, b + e) are considered
+     * the same. Other comparisons are scaled appropriately, e.g. to comparing two points on the unit circle.
+     *
+     * Hashing takes sqrt(error) by sqrt(error) sized blocks.
+     * @param error The allowed error for comparisons
+     */
     public GeoUtils(double error) {
         this.error = error;
         this.errorSqrt = Math.sqrt(error);
@@ -273,7 +276,7 @@ class PointCount {
 }
 
 class State {
-    class Operation {
+    private static class Operation {
         boolean circle;
         double a;
         double b;
@@ -361,15 +364,16 @@ class State {
     }
 
     public void add(Circle c) {
-        circles[cs++] = c;
+        pushCircle(c);
     }
 
     public void add(Line l) {
-        lines[ls++] = l;
+        pushLine(l);
     }
 
     public boolean add(Point p) {
-        // TODO if there are errors, also check hash of neighborhood of points
+        // Only check the hash box for the point.
+        // There is a very small chance we add an already added point.
         long hash = geo.hash(p);
         if (seen.containsKey(hash)) {
             PointCount pointCount = seen.get(hash);
@@ -476,7 +480,6 @@ class State {
         ps = c;
     }
 
-
     public Line getLine(int a, int b) {
         return geo.line(points[a], points[b]);
     }
@@ -533,13 +536,23 @@ interface Problem {
 }
 
 class ProblemSolver {
-    class Operation {
-        boolean circle;
+    static class Operation {
+        enum Type {
+            CIRCLE(true), LINE(false), PERP_BISECT(false), PERP(false), ANGLE_BISECT(false), PARALLEL(false), CONG_CIRCLE(true);
+
+            boolean circle;
+
+            Type(boolean circle) {
+                this.circle = circle;
+            }
+        }
+
+        Type type;
         int a;
         int b;
 
-        public Operation(boolean circle, int a, int b) {
-            this.circle = circle;
+        public Operation(Type type, int a, int b) {
+            this.type = type;
             this.a = a;
             this.b = b;
         }
@@ -547,7 +560,7 @@ class ProblemSolver {
         @Override
         public String toString() {
             return "Operation{" +
-                "circle=" + circle +
+                "type=" + type +
                 ", a=" + a +
                 ", b=" + b +
                 '}';
@@ -568,7 +581,6 @@ class ProblemSolver {
 
     // global search state
     HashSet<Long> seen;
-    ArrayList<Operation> history;
     State s;
     int maxDepth;
     Problem p;
@@ -580,25 +592,25 @@ class ProblemSolver {
         seen = new HashSet<>();
         s = p.getSetUp(depth);
         maxDepth = depth;
-        history = new ArrayList<>();
         counter = 0;
         this.p = p;
-        boolean found = dfs(0);
-        if (!found) {
+        Solution found = dfs(0);
+        if (found == null) {
             return new Solution(null, null, counter);
         }
 
-        return new Solution(s, history, counter);
+        Collections.reverse(found.history);
+        return found;
     }
 
-    public boolean dfs(int depth) {
+    public Solution dfs(int depth) {
         if (depth == maxDepth) {
             counter++;
-            return p.isSolved(s);
+            return p.isSolved(s) ? new Solution(s, new ArrayList<>(), counter) : null;
         }
 
         if (seen.contains(s.hash)) {
-            return false;
+            return null;
         }
 
         seen.add(s.hash);
@@ -614,14 +626,13 @@ class ProblemSolver {
                 }
 
                 int c = s.pushCircle(circle);
-                history.add(new Operation(true, i, j));
-                boolean found = dfs(depth + 1);
+                Solution found = dfs(depth + 1);
 
-                if (found) {
-                    return true;
+                if (found != null) {
+                    found.history.add(new Operation(Operation.Type.CIRCLE, i, j));
+                    return found;
                 }
                 s.popCircle(c);
-                history.remove(history.size() - 1);
             }
         }
 
@@ -634,18 +645,17 @@ class ProblemSolver {
                 }
 
                 int c = s.pushLine(line);
-                history.add(new Operation(false, i, j));
-                boolean found = dfs(depth + 1);
+                Solution found = dfs(depth + 1);
 
-                if (found) {
-                    return true;
+                if (found != null) {
+                    found.history.add(new Operation(Operation.Type.LINE, i, j));
+                    return found;
                 }
                 s.popLine(c);
-                history.remove(history.size() - 1);
             }
         }
 
-        return false;
+        return null;
     }
 }
 
@@ -773,8 +783,8 @@ public class EuclideaSolver {
         int c = 0;
         int l = 0;
         for (ProblemSolver.Operation o : solution.history) {
-            c += o.circle ? 1 : 0;
-            l += o.circle ? 0 : 1;
+            c += o.type.circle ? 1 : 0;
+            l += o.type.circle ? 0 : 1;
         }
 
         j = state.cs - c;
@@ -791,10 +801,10 @@ public class EuclideaSolver {
             ProblemSolver.Operation o = solution.history.get(i);
 
             Color color = i < colors.length ? colors[i] : Color.PINK;
-            if (o.circle) {
-                draw(image, state.circles[j++], new Point(0, 0), 100.0, colors[i]);
+            if (o.type.circle) {
+                draw(image, state.circles[j++], new Point(0, 0), 100.0, color);
             } else {
-                draw(image, state.lines[k++], new Point(0, 0), 100.0, colors[i]);
+                draw(image, state.lines[k++], new Point(0, 0), 100.0, color);
             }
         }
 
@@ -805,7 +815,7 @@ public class EuclideaSolver {
         verify();
         long start = System.currentTimeMillis();
         ProblemSolver solver = new ProblemSolver();
-        ProblemSolver.Solution solution = solver.solve(new Problem9_9(), 4);
+        ProblemSolver.Solution solution = solver.solve(new Problem9_1(), 5);
         System.out.println(System.currentTimeMillis() - start);
         System.out.println(solution.counter);
 
@@ -813,7 +823,6 @@ public class EuclideaSolver {
             return;
         }
 
-        System.out.println(solution.counter);
         System.out.println(solution.history);
 //        for (int i = 0; i < solution.state.ps; i++) {
 //            System.out.println(solution.state.points[i]);

@@ -214,7 +214,8 @@ class GeoUtils {
 
         double baseX = a.center.x + baseScalar * (b.center.x - a.center.x);
         double baseY = a.center.y + baseScalar * (b.center.y - a.center.y);
-        double hScaled = Math.sqrt(r0 * r0 / d2 - baseScalar * baseScalar);
+        double hScaledSq = r0 * r0 / d2 - baseScalar * baseScalar;
+        double hScaled = hScaledSq > 0 ? Math.sqrt(hScaledSq) : 0;
 
         Point p1 = new Point(baseX + hScaled * (b.center.y - a.center.y), baseY - hScaled * (b.center.x - a.center.x));
         Point p2 = new Point(baseX - hScaled * (b.center.y - a.center.y), baseY + hScaled * (b.center.x - a.center.x));
@@ -865,7 +866,7 @@ class Problem9_9 implements Problem {
     Point p = new Point(0, 0);
     Point q = new Point(0, 1);
     Point goal = new Point(0, 1.0/6);
-    GeoUtils geo = new GeoUtils(1E-7);
+    GeoUtils geo = new GeoUtils(1E-6);
     Line l = geo.line(p, q);
 
     @Override

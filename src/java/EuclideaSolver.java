@@ -1,6 +1,9 @@
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.*;
 
 /**
@@ -568,7 +571,7 @@ class ProblemSolver {
         }
     }
 
-    class Solution {
+    static class Solution {
         State state;
         ArrayList<Operation> history;
         long counter;
@@ -741,7 +744,8 @@ public class EuclideaSolver {
     }
 
     public static void draw(BufferedImage image, Line l, Point origin, double scale, Color c) {
-        Graphics graphics = image.getGraphics();
+        Graphics2D graphics = image.createGraphics();
+        graphics.setStroke(new BasicStroke(3));
         graphics.setColor(c);
 
         int width = image.getWidth();
@@ -754,14 +758,16 @@ public class EuclideaSolver {
     }
 
     public static void draw(BufferedImage image, Circle c, Point origin, double scale, Color d) {
-        Graphics graphics = image.getGraphics();
+        Graphics2D graphics = image.createGraphics();
+        graphics.setStroke(new BasicStroke(3));
         graphics.setColor(d);
         int width = image.getWidth();
         int height = image.getHeight();
         int centerX = (int) ((c.center.x - origin.x) * scale + width / 2);
         int centerY = (int) ((c.center.y - origin.y) * scale + height / 2);
         int radius = (int) (c.radius * scale);
-        graphics.drawOval(centerX - radius, centerY - radius, radius * 2, radius * 2);
+        graphics.drawOval(centerX - radius, centerY - radius, radius * 2 + 1, radius * 2 + 1);
+        graphics.drawOval(centerX - 3, centerY - 3, 3 * 2 + 1, 3 * 2 + 1);
     }
 
     public static void showImage(BufferedImage image) {
@@ -772,11 +778,8 @@ public class EuclideaSolver {
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
     }
 
-    public static void drawAndShow(BufferedImage image, ProblemSolver.Solution solution) {
+    public static void drawAndShow(BufferedImage image, ProblemSolver.Solution solution, double scale) {
         State state = solution.state;
-        int j = 0;
-        int k = 0;
-
         Color[] colors = new Color[]{
             Color.RED, Color.ORANGE, Color.YELLOW, Color.GREEN, Color.CYAN, Color.BLUE, Color.MAGENTA,
         };
@@ -788,14 +791,14 @@ public class EuclideaSolver {
             l += o.type.circle ? 0 : 1;
         }
 
-        j = state.cs - c;
-        k = state.ls - l;
+        int j = state.cs - c;
+        int k = state.ls - l;
         for (int i = 0; i < j; i++) {
-            draw(image, state.circles[i], new Point(0, 0), 100.0, Color.BLACK);
+            draw(image, state.circles[i], new Point(0, 0), scale, Color.BLACK);
         }
 
         for (int i = 0; i < k; i++) {
-            draw(image, state.lines[i], new Point(0, 0), 100.0, Color.BLACK);
+            draw(image, state.lines[i], new Point(0, 0), scale, Color.BLACK);
         }
 
         for (int i = 0; i < solution.history.size(); i++) {
@@ -803,20 +806,55 @@ public class EuclideaSolver {
 
             Color color = i < colors.length ? colors[i] : Color.PINK;
             if (o.type.circle) {
-                draw(image, state.circles[j++], new Point(0, 0), 100.0, color);
+                draw(image, state.circles[j++], new Point(0, 0), scale, color);
             } else {
-                draw(image, state.lines[k++], new Point(0, 0), 100.0, color);
+                draw(image, state.lines[k++], new Point(0, 0), scale, color);
             }
         }
 
         showImage(image);
     }
 
-    public static void main(String[] args) {
+    public static ProblemSolver.Solution read() throws IOException {
+        ArrayList<ProblemSolver.Operation> history = new ArrayList<>();
+        State state = new State(new GeoUtils(1E-6), 6);
+        BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
+        for (String s = in.readLine(); s != null && !s.isEmpty(); s = in.readLine()) {
+            StringTokenizer st = new StringTokenizer(s);
+            String op = st.nextToken();
+            if (op.equals("Object")) {
+                String object = st.nextToken();
+                if (object.equals("Circle")) {
+                    double a = Double.parseDouble(st.nextToken());
+                    double b = Double.parseDouble(st.nextToken());
+                    double c = Double.parseDouble(st.nextToken());
+                    state.add(new Circle(new Point(a, b), c));
+                } else {
+                    double a = Double.parseDouble(st.nextToken());
+                    double b = Double.parseDouble(st.nextToken());
+                    double c = Double.parseDouble(st.nextToken());
+                    double d = Double.parseDouble(st.nextToken());
+                    state.add(new Line(new Point(a, b), new Point(c, d)));
+                }
+            } else if (op.equals("Operation")) {
+                ProblemSolver.Operation.Type type = ProblemSolver.Operation.Type.valueOf(st.nextToken());
+                history.add(
+                    new ProblemSolver.Operation(
+                        type, Integer.parseInt(st.nextToken()), Integer.parseInt(st.nextToken())
+                    )
+                );
+            }
+        }
+
+        return new ProblemSolver.Solution(state, history, 0);
+    }
+
+    public static void main(String[] args) throws IOException {
         verify();
         long start = System.currentTimeMillis();
         ProblemSolver solver = new ProblemSolver();
-        ProblemSolver.Solution solution = solver.solve(new Problem9_1(), 5);
+//        ProblemSolver.Solution solution = solver.solve(new Problem9_1(), 5);
+        ProblemSolver.Solution solution = read();
         System.out.println(System.currentTimeMillis() - start);
         System.out.println(solution.counter);
 
@@ -825,11 +863,8 @@ public class EuclideaSolver {
         }
 
         System.out.println(solution.history);
-//        for (int i = 0; i < solution.state.ps; i++) {
-//            System.out.println(solution.state.points[i]);
-//        }
         BufferedImage image = new BufferedImage(600, 800, BufferedImage.TYPE_INT_ARGB);
-        drawAndShow(image, solution);
+        drawAndShow(image, solution, 100.0);
     }
 }
 

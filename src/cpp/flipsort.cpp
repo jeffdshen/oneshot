@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <queue>
 
 using namespace std;
 
@@ -21,12 +22,13 @@ constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
 // constexpr char input[] = "FgqlipnauEmTO";
 // constexpr char input[] = "QFlipSortaMeZ";
 // constexpr char input[] = "DfbecjavneAREJVLre";
+// constexpr char input[] = "Sort";
 
-struct node {
+struct Node {
   array<int8_t, sizeof(input) - 1> l;
 
-  node flip(int k) const {
-    node n;
+  Node flip(int k) const {
+    Node n;
     for (int i = 0; i < k ; i++) {
       n.l[i] = l[i];
     }
@@ -38,8 +40,8 @@ struct node {
     return n;
   }
 
-  node canonical() const {
-    node n;
+  Node canonical() const {
+    Node n;
     for (int i = 0; i < l.size(); i++) {
       n.l[i] = abs(l[i]);
     }
@@ -48,12 +50,12 @@ struct node {
     return n;
   }
 
-  bool operator==(const node &n) const { return l == n.l; }
+  bool operator==(const Node &n) const { return l == n.l; }
 
-  bool operator!=(const node &n) const { return l != n.l; }
+  bool operator!=(const Node &n) const { return l != n.l; }
 };
 
-ostream &operator<<(ostream &os, const node &n) {
+ostream &operator<<(ostream &os, const Node &n) {
   os << "[";
   for (int k : n.l) {
     os << k << ",";
@@ -62,9 +64,33 @@ ostream &operator<<(ostream &os, const node &n) {
   return os;
 }
 
+Node parse(const std::string &s) {
+  Node n;
+  for (int i = 0; i < n.l.size(); i++) {
+    if (s[i] >= 'a') {
+      n.l[i] = s[i] - 'a' + 1;
+    } else {
+      n.l[i] = -(s[i] - 'A' + 1);
+    }
+  }
+  return n;
+}
+
+string unparse(Node n) {
+  string s;
+  for (int i = 0; i < n.l.size(); i++) {
+    if (n.l[i] >= 0) {
+      s += 'a' + n.l[i] - 1;
+    } else {
+      s += 'A' - n.l[i] - 1;
+    }
+  }
+  return s;
+}
+
 namespace std {
-template <> struct hash<node> {
-  size_t operator()(const node &s) const noexcept {
+template <> struct hash<Node> {
+  size_t operator()(const Node &s) const noexcept {
     size_t h = 0;
     for (int i = 0; i < s.l.size(); i++) {
       h  = ((h << 5) + h) + s.l[i];
@@ -74,15 +100,115 @@ template <> struct hash<node> {
 };
 } // namespace std
 
-vector<int> bfs(node s, node t) {
+struct ScoredNode {
+  Node n;
+  int score;
+
+  bool operator<(const ScoredNode& sn) const {
+    return score > sn.score;
+  }
+};
+
+vector<int> astar(Node s, Node t) {
+  if (s == t) {
+    return {};
+  }
+
+  priority_queue<ScoredNode> queue;
+  unordered_map<Node, int> prev;
+  unordered_map<Node, int> dist;
+  unordered_set<Node> closed;
+
+  queue.push({s, 0});
+  prev.emplace(s, -1);
+  dist.emplace(s, 0);
+
+  std::array<int8_t, 256> next = {0};
+  next[64] = t.l[0];
+  for (int i = 1; i < t.l.size(); i++) {
+    next[t.l[i-1] + 64] = t.l[i];
+    next[-t.l[i] + 64] = -t.l[i-1];
+  }
+
+  int lastDist = 0;
+  int count = 0;
+  while (!queue.empty()) {
+    ScoredNode us = queue.top();
+    Node u = us.n;
+
+    if (count % 1024 == 0 && dist[u] > lastDist) {
+      lastDist = dist[u];
+      cout << "Finished " << lastDist << ", " << count << endl;
+    }
+    count++;
+
+    if (u == t) {
+      vector<int> flips;
+      Node v = t;
+      while (v != s) {
+        int f = prev[v];
+        flips.push_back(f);
+        v = v.flip(f);
+      }
+
+      reverse(flips.begin(), flips.end());
+      return flips;
+    }
+    queue.pop();
+
+    if (closed.find(u) != closed.end()) {
+      continue;
+    }
+    closed.emplace(u);
+
+    bool match = true;
+    for (int i = 0; i < u.l.size(); i++) {
+      if (match && u.l[i] == t.l[i]) {
+        continue;
+      }
+
+      match = false;
+
+      // ASSUMES GOAL ARE THE FIRST LETTERS ALPHABETICAL LOWER CASE
+      // if ((i > 0 && u.l[i] == u.l[i-1] + 1) || (i == 0 && u.l[i] == 1)) {
+      //   continue;
+      // }
+
+      if ((i > 0 && next[u.l[i-1] + 64] == u.l[i]) || (i == 0 && next[64] == u.l[i])) {
+        continue;
+      }
+
+      Node v = u.flip(i);
+      if (prev.find(v) != prev.end()) {
+        continue;
+      }
+
+      int d = dist[u] + 1;
+      if (dist.find(v) == dist.end() || d < dist[v]) {
+        prev[v] = i;
+        dist[v] = d;
+        bool improved = (i > 0 && next[v.l[i-1] + 64] == v.l[i]) || (i == 0 && next[64] == v.l[i]);
+        // ASSUMES GOAL ARE THE FIRST LETTERS ALPHABETICAL LOWER CASE
+        // bool improved = (i > 0 && v.l[i] == v.l[i-1] + 1) || (i == 0 && v.l[i] == 1);
+
+        int score = us.score + 1 - improved;
+        queue.push({v, score});
+      }
+    }
+  }
+
+  throw runtime_error("no path");
+}
+
+vector<int> bfs(Node s, Node t) {
   std::array<int8_t, 256> smap = {0};
   for (int i = 1; i < s.l.size(); i++) {
     smap[s.l[i-1] + 64] = s.l[i];
     smap[-s.l[i] + 64] = -s.l[i-1];
   }
 
-  deque<node> sb;
-  deque<node> tb;
+  deque<Node> sb;
+  deque<Node> tb;
   sb.emplace_back(s);
   tb.emplace_back(t);
 
@@ -90,15 +216,15 @@ vector<int> bfs(node s, node t) {
     return {};
   }
 
-  unordered_map<node, int> sseen;
+  unordered_map<Node, int> sseen;
   sseen.emplace(s, -1);
-  unordered_map<node, int> tseen;
+  unordered_map<Node, int> tseen;
   tseen.emplace(t, -1);
   for (int i = 0;; i++) {
     {
       size_t size = sb.size();
       for (int j = 0; j < size; j++) {
-        node u = sb.front();
+        Node u = sb.front();
         sb.pop_front();
         bool match = true;
         for (int k = 0; k < u.l.size(); k++) {
@@ -108,12 +234,13 @@ vector<int> bfs(node s, node t) {
 
           match = false;
 
-          // ASSUMES GOAL IS ALPHABETICAL LOWER CASE
+          // ASSUMES GOAL IS ALPHABETICAL LOWER CASE FOR CORRECTNESS
+          // SLOWER IF NOT THE FIRST LETTERS
           if (k > 0 && u.l[k] == u.l[k-1] + 1) {
             continue;
           }
 
-          node v = u.flip(k);
+          Node v = u.flip(k);
           if (sseen.find(v) != sseen.end()) {
             continue;
           }
@@ -121,7 +248,7 @@ vector<int> bfs(node s, node t) {
           if (tseen.find(v) != tseen.end()) {
             vector<int> flips;
             flips.resize(i * 2 + 1);
-            node p = v;
+            Node p = v;
             int f = k;
             for (int a = i; a >= 0; a--) {
               flips[a] = f;
@@ -146,7 +273,7 @@ vector<int> bfs(node s, node t) {
     {
       size_t size = tb.size();
       for (int j = 0; j < size; j++) {
-        node u = tb.front();
+        Node u = tb.front();
         tb.pop_front();
         bool match = true;
 
@@ -161,7 +288,7 @@ vector<int> bfs(node s, node t) {
             continue;
           }
 
-          node v = u.flip(k);
+          Node v = u.flip(k);
           if (tseen.find(v) != tseen.end()) {
             continue;
           }
@@ -169,7 +296,7 @@ vector<int> bfs(node s, node t) {
           if (sseen.find(v) != sseen.end()) {
             vector<int> flips;
             flips.resize(i * 2 + 2);
-            node p = v;
+            Node p = v;
             int f = k;
             for (int a = i + 1; a < 2 * i + 2; a++) {
               flips[a] = f;
@@ -197,73 +324,20 @@ vector<int> bfs(node s, node t) {
   }
 }
 
-node parse(const std::string &s) {
-  node n;
-  for (int i = 0; i < n.l.size(); i++) {
-    if (s[i] >= 'a') {
-      n.l[i] = s[i] - 'a' + 1;
-    } else {
-      n.l[i] = -(s[i] - 'A' + 1);
-    }
-  }
-  return n;
-}
-
-string unparse(node n) {
-  string s;
-  for (int i = 0; i < n.l.size(); i++) {
-    if (n.l[i] >= 0) {
-      s += 'a' + n.l[i] - 1;
-    } else {
-      s += 'A' - n.l[i] - 1;
-    }
-  }
-  return s;
-}
-
 int main() {
-  node start = parse(input);
-  // //FlipSortMeZqjkYXWVUDCBghAN
-  // //01234567890123456789012345
-  // start = start.flip(14);
-  // start = start.flip(11);
-  // //FlipSortMeZYXWVUDCBghANKJQ
-  // //01234567890123456789012345
-  // start = start.flip(4);
-  // //FlipqjknaHGbcduvwxyzEmTROs
-  // //01234567890123456789012345
-  // start = start.flip(23);
-  // //FlipqjknaHGbcduvwxyzEmTSor
-  // //01234567890123456789012345
-  // start = start.flip(24);
-  // //FlipqjknaHGbcduvwxyzEmTSRO
-  // //01234567890123456789012345
-  // start = start.flip(8);
-  // //FlipqjknorstMeZYXWVUDCBghA
-  // //01234567890123456789012345
-  // start = start.flip(7);
-  // start = start.flip(21);
-  // //FlipqjkaHGbcduvwxyzEmnorst
-  // //01234567890123456789012345
-  // start = start.flip(19);
-  // start = start.flip(1);
-  // //FEmnorstZYXWVUDCBghAKJQPIL
-  // //01234567890123456789012345
-  // start = start.flip(24);
-  // start = start.flip(22);
-  // //FEmnorstZYXWVUDCBghAKJILpq
-  // //01234567890123456789012345
-
-  node fin = start.canonical();
+  Node start = parse(input);
+  Node fin = start.canonical();
   cout << unparse(start) << endl;
   cout << start << ", " << fin << endl;
-  auto path = bfs(start, fin);
-  node n = start;
+  auto path = astar(start, fin);
+  // auto path = bfs(start, fin);
+
+  Node n = start;
   for (int i : path) {
     n = n.flip(i);
     cout << i << endl;
     cout << unparse(n) << endl;
   }
-  cout << endl;
+  cout << path.size() << " steps" << endl;
   return 0;
 }

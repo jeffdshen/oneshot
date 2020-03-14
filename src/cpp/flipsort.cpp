@@ -124,7 +124,6 @@ vector<int> astar(Node s, Node t) {
   dist.emplace(s, 0);
 
   std::array<int8_t, 256> next = {0};
-  next[64] = t.l[0];
   for (int i = 1; i < t.l.size(); i++) {
     next[t.l[i-1] + 64] = t.l[i];
     next[-t.l[i] + 64] = -t.l[i-1];
@@ -138,11 +137,12 @@ vector<int> astar(Node s, Node t) {
 
     if (count % 1024 == 0 && dist[u] > lastDist) {
       lastDist = dist[u];
-      cout << "Finished " << lastDist << ", " << count << endl;
+      cout << "Finished " << lastDist << ", " << count << ", " << us.score << endl;
     }
     count++;
 
     if (u == t) {
+      cout << "Finished " << lastDist << ", " << count << ", " << us.score << endl;
       vector<int> flips;
       Node v = t;
       while (v != s) {
@@ -170,11 +170,11 @@ vector<int> astar(Node s, Node t) {
       match = false;
 
       // ASSUMES GOAL ARE THE FIRST LETTERS ALPHABETICAL LOWER CASE
-      // if ((i > 0 && u.l[i] == u.l[i-1] + 1) || (i == 0 && u.l[i] == 1)) {
+      // if ((i > 0 && u.l[i] == u.l[i-1] + 1)) {
       //   continue;
       // }
 
-      if ((i > 0 && next[u.l[i-1] + 64] == u.l[i]) || (i == 0 && next[64] == u.l[i])) {
+      if ((i > 0 && next[u.l[i-1] + 64] == u.l[i])) {
         continue;
       }
 
@@ -187,7 +187,7 @@ vector<int> astar(Node s, Node t) {
       if (dist.find(v) == dist.end() || d < dist[v]) {
         prev[v] = i;
         dist[v] = d;
-        bool improved = (i > 0 && next[v.l[i-1] + 64] == v.l[i]) || (i == 0 && next[64] == v.l[i]);
+        bool improved = (i > 0 && next[v.l[i-1] + 64] == v.l[i]) || (i == 0 && t.l[i] == v.l[i]);
         // ASSUMES GOAL ARE THE FIRST LETTERS ALPHABETICAL LOWER CASE
         // bool improved = (i > 0 && v.l[i] == v.l[i-1] + 1) || (i == 0 && v.l[i] == 1);
 

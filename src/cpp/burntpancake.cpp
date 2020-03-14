@@ -11,9 +11,13 @@
 
 using namespace std;
 
-// constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
+constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
 // constexpr char input[] = "FipSoUkYLDtMeZqjVhxCBgrwAN";
-constexpr char input[] = "okYLjDVtbpeZqFiuahxMgrwNSC";
+// constexpr char input[] = "okYLjDVtbpeZqFiuahxMgrwNSC";
+// constexpr char input[] = "ABCDEF";
+// constexpr char input[] = "ABCDEFGH"; // looks similar to pop count algorithm
+// constexpr char input[] = "ABCDEFGHIJ"; // takes a long time
+// constexpr char input[] = "AfBeCd";
 // constexpr char input[] = "FlipSortMeZqjYBgAN";
 // constexpr char input[] = "FlipSortMeZANJQG";
 // constexpr char input[] = "FghqjklipnabcduvwxyzEmTSor";

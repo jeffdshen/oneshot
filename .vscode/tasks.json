@@ -14,7 +14,7 @@
                 "-O2",
                 "${file}",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
+                "${workspaceFolder}/out/${fileBasenameNoExtension}"
             ],
             "group": {
                 "kind": "build",

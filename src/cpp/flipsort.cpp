@@ -10,9 +10,16 @@
 
 using namespace std;
 
-// constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
+constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
+// constexpr char input[] = "FlipSortMeZqjYBgAN";
 // constexpr char input[] = "FlipSortMeZANJQG";
-constexpr char input[] = "flipsortmez";
+// constexpr char input[] = "FghqjklipnabcduvwxyzEmTSor";
+// constexpr char input[] = "FgqjipnazEmTor";
+// constexpr char input[] = "FghqjklipnabcduvwxyzEmTSRO";
+// constexpr char input[] = "FEmnorstZYXWVUDCBghAKJILpq";
+// constexpr char input[] = "FmrZDgAKLp"; // THIS ONE = 12 + 12 = 24.
+// constexpr char input[] = "FgqlipnauEmTO";
+// constexpr char input[] = "QFlipSortaMeZ";
 // constexpr char input[] = "DfbecjavneAREJVLre";
 
 struct node {
@@ -25,8 +32,7 @@ struct node {
     }
 
     for (int i = k; i < l.size(); i++) {
-      // n.l[i] = -l[l.size() - 1 + k - i];
-      n.l[i] = l[l.size() - 1 + k - i];
+      n.l[i] = -l[l.size() - 1 + k - i];
     }
 
     return n;
@@ -61,8 +67,7 @@ template <> struct hash<node> {
   size_t operator()(const node &s) const noexcept {
     size_t h = 0;
     for (int i = 0; i < s.l.size(); i++) {
-      h <<= 1;
-      h ^= s.l[i];
+      h  = ((h << 5) + h) + s.l[i];
     };
     return h;
   }
@@ -70,6 +75,12 @@ template <> struct hash<node> {
 } // namespace std
 
 vector<int> bfs(node s, node t) {
+  std::array<int8_t, 256> smap = {0};
+  for (int i = 1; i < s.l.size(); i++) {
+    smap[s.l[i-1] + 64] = s.l[i];
+    smap[-s.l[i] + 64] = -s.l[i-1];
+  }
+
   deque<node> sb;
   deque<node> tb;
   sb.emplace_back(s);
@@ -96,6 +107,11 @@ vector<int> bfs(node s, node t) {
           }
 
           match = false;
+
+          // ASSUMES GOAL IS ALPHABETICAL LOWER CASE
+          if (k > 0 && u.l[k] == u.l[k-1] + 1) {
+            continue;
+          }
 
           node v = u.flip(k);
           if (sseen.find(v) != sseen.end()) {
@@ -140,6 +156,10 @@ vector<int> bfs(node s, node t) {
           }
 
           match = false;
+
+          if (k > 0 && smap[u.l[k-1] + 64] == u.l[k]) {
+            continue;
+          }
 
           node v = u.flip(k);
           if (tseen.find(v) != tseen.end()) {
@@ -203,15 +223,37 @@ string unparse(node n) {
 
 int main() {
   node start = parse(input);
-  //FlipSortMeZqjkYXWVUDCBghAN
-  //01234567890123456789012345
+  // //FlipSortMeZqjkYXWVUDCBghAN
+  // //01234567890123456789012345
   // start = start.flip(14);
   // start = start.flip(11);
-  //FlipSortMeZYXWVUDCBghANKJQ
-  //01234567890123456789012345
+  // //FlipSortMeZYXWVUDCBghANKJQ
+  // //01234567890123456789012345
+  // start = start.flip(4);
+  // //FlipqjknaHGbcduvwxyzEmTROs
+  // //01234567890123456789012345
+  // start = start.flip(23);
+  // //FlipqjknaHGbcduvwxyzEmTSor
+  // //01234567890123456789012345
+  // start = start.flip(24);
+  // //FlipqjknaHGbcduvwxyzEmTSRO
+  // //01234567890123456789012345
+  // start = start.flip(8);
+  // //FlipqjknorstMeZYXWVUDCBghA
+  // //01234567890123456789012345
+  // start = start.flip(7);
   // start = start.flip(21);
+  // //FlipqjkaHGbcduvwxyzEmnorst
+  // //01234567890123456789012345
   // start = start.flip(19);
-  //FlipSortMeZYXWVUDCBANKJQHG
+  // start = start.flip(1);
+  // //FEmnorstZYXWVUDCBghAKJQPIL
+  // //01234567890123456789012345
+  // start = start.flip(24);
+  // start = start.flip(22);
+  // //FEmnorstZYXWVUDCBghAKJILpq
+  // //01234567890123456789012345
+
   node fin = start.canonical();
   cout << unparse(start) << endl;
   cout << start << ", " << fin << endl;

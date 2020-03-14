@@ -11,7 +11,9 @@
 
 using namespace std;
 
-constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
+// constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
+// constexpr char input[] = "FipSoUkYLDtMeZqjVhxCBgrwAN";
+constexpr char input[] = "okYLjDVtbpeZqFiuahxMgrwNSC";
 // constexpr char input[] = "FlipSortMeZqjYBgAN";
 // constexpr char input[] = "FlipSortMeZANJQG";
 // constexpr char input[] = "FghqjklipnabcduvwxyzEmTSor";
@@ -142,7 +144,7 @@ vector<int> astar(Node s, Node t) {
     count++;
 
     if (u == t) {
-      cout << "Finished " << lastDist << ", " << count << ", " << us.score << endl;
+      cout << "Finished " << dist[u] << ", " << count << ", " << us.score << endl;
       vector<int> flips;
       Node v = t;
       while (v != s) {

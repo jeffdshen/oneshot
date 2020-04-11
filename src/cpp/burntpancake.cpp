@@ -33,6 +33,18 @@ constexpr char input[] = "FlipSortMeZqjkYXWVUDCBghAN";
 struct Node {
   array<int8_t, sizeof(input) - 1> l;
 
+  constexpr int8_t& operator[](size_t i) {
+    return l[i];
+  }
+
+  constexpr const int8_t& operator[](size_t i) const {
+    return l[i];
+  }
+
+  constexpr size_t size() const noexcept {
+    return l.size();
+  }
+
   Node flip(int k) const {
     Node n;
     for (int i = 0; i < k ; i++) {
@@ -106,14 +118,42 @@ template <> struct hash<Node> {
 };
 } // namespace std
 
+struct NextMap {
+  std::array<int8_t, 256> next = {0};
+  NextMap(Node n) {
+    for (int i = 1; i < n.l.size(); i++) {
+      next[n.l[i-1] + 64] = n.l[i];
+      next[-n.l[i] + 64] = -n.l[i-1];
+    }
+  }
+
+  constexpr int8_t& operator[](int l) {
+    return next[l + 64];
+  }
+
+  constexpr const int8_t& operator[](int l) const {
+    return next[l + 64];
+  }
+};
+
+
+bool isJoin(const Node& u, const Node& t, int i) {
+  NextMap next{t};
+  return ((i > 0 && next[u[i-1]] == u[i]) || (i == 0 && t[i] == u[i]));
+}
+
 struct ScoredNode {
   Node n;
   int score;
+  int id = maxId++;
 
+  static int maxId;
   bool operator<(const ScoredNode& sn) const {
-    return score > sn.score;
+    return score > sn.score || (score == sn.score && id < sn.id);
   }
 };
+
+int ScoredNode::maxId = 0;
 
 vector<int> astar(Node s, Node t) {
   if (s == t) {
@@ -129,11 +169,8 @@ vector<int> astar(Node s, Node t) {
   prev.emplace(s, -1);
   dist.emplace(s, 0);
 
-  std::array<int8_t, 256> next = {0};
-  for (int i = 1; i < t.l.size(); i++) {
-    next[t.l[i-1] + 64] = t.l[i];
-    next[-t.l[i] + 64] = -t.l[i-1];
-  }
+  NextMap nextT{t};
+  NextMap nextS{s};
 
   int lastDist = 0;
   int count = 0;
@@ -143,12 +180,12 @@ vector<int> astar(Node s, Node t) {
 
     if (count % 1024 == 0 && dist[u] > lastDist) {
       lastDist = dist[u];
-      cout << "Finished " << lastDist << ", " << count << ", " << us.score << endl;
+      cout << "Finished " << lastDist << ", " << count << ", " << queue.size() << ", " << us.score << endl;
     }
     count++;
 
     if (u == t) {
-      cout << "Finished " << dist[u] << ", " << count << ", " << us.score << endl;
+      cout << "Finished " << dist[u] << ", " << count <<  ", " << queue.size() << ", " << us.score << endl;
       vector<int> flips;
       Node v = t;
       while (v != s) {
@@ -167,20 +204,9 @@ vector<int> astar(Node s, Node t) {
     }
     closed.emplace(u);
 
-    bool match = true;
-    for (int i = 0; i < u.l.size(); i++) {
-      if (match && u.l[i] == t.l[i]) {
-        continue;
-      }
-
-      match = false;
-
-      // ASSUMES GOAL ARE THE FIRST LETTERS ALPHABETICAL LOWER CASE
-      // if ((i > 0 && u.l[i] == u.l[i-1] + 1)) {
-      //   continue;
-      // }
-
-      if ((i > 0 && next[u.l[i-1] + 64] == u.l[i])) {
+    for (int i = 0; i < u.size(); i++) {
+      // Don't cut joined
+      if ((i > 0 && nextT[u[i-1]] == u[i]) || (i == 0 && t[i] == u[i])) {
         continue;
       }
 
@@ -189,15 +215,18 @@ vector<int> astar(Node s, Node t) {
         continue;
       }
 
+      // Don't join cut
+      if ((i > 0 && nextS[v[i-1]] == v[i]) || (i == 0 && s[i] == v[i])) {
+        continue;
+      }
+
       int d = dist[u] + 1;
       if (dist.find(v) == dist.end() || d < dist[v]) {
         prev[v] = i;
         dist[v] = d;
-        bool improved = (i > 0 && next[v.l[i-1] + 64] == v.l[i]) || (i == 0 && t.l[i] == v.l[i]);
-        // ASSUMES GOAL ARE THE FIRST LETTERS ALPHABETICAL LOWER CASE
-        // bool improved = (i > 0 && v.l[i] == v.l[i-1] + 1) || (i == 0 && v.l[i] == 1);
-
-        int score = us.score + 1 - improved;
+        bool joined = (i > 0 && nextT[v[i-1]] == v[i]) || (i == 0 && t[i] == v[i]);
+        bool cut = (i > 0 && nextS[u[i-1]] == u[i]) || (i == 0 && s[i] == u[i]);
+        int score = us.score + 1 - joined;
         queue.push({v, score});
       }
     }
@@ -207,11 +236,7 @@ vector<int> astar(Node s, Node t) {
 }
 
 vector<int> bfs(Node s, Node t) {
-  std::array<int8_t, 256> smap = {0};
-  for (int i = 1; i < s.l.size(); i++) {
-    smap[s.l[i-1] + 64] = s.l[i];
-    smap[-s.l[i] + 64] = -s.l[i-1];
-  }
+  NextMap smap{s};
 
   deque<Node> sb;
   deque<Node> tb;
@@ -233,8 +258,8 @@ vector<int> bfs(Node s, Node t) {
         Node u = sb.front();
         sb.pop_front();
         bool match = true;
-        for (int k = 0; k < u.l.size(); k++) {
-          if (match && u.l[k] == t.l[k]) {
+        for (int k = 0; k < u.size(); k++) {
+          if (match && u[k] == t[k]) {
             continue;
           }
 
@@ -242,7 +267,7 @@ vector<int> bfs(Node s, Node t) {
 
           // ASSUMES GOAL IS ALPHABETICAL LOWER CASE FOR CORRECTNESS
           // SLOWER IF NOT THE FIRST LETTERS
-          if (k > 0 && u.l[k] == u.l[k-1] + 1) {
+          if (k > 0 && u[k] == u[k-1] + 1) {
             continue;
           }
 
@@ -283,14 +308,14 @@ vector<int> bfs(Node s, Node t) {
         tb.pop_front();
         bool match = true;
 
-        for (int k = 0; k < u.l.size(); k++) {
-          if (match && u.l[k] == s.l[k]) {
+        for (int k = 0; k < u.size(); k++) {
+          if (match && u[k] == s[k]) {
             continue;
           }
 
           match = false;
 
-          if (k > 0 && smap[u.l[k-1] + 64] == u.l[k]) {
+          if (k > 0 && smap[u[k-1]] == u[k]) {
             continue;
           }
 
@@ -333,15 +358,17 @@ vector<int> bfs(Node s, Node t) {
 int main() {
   Node start = parse(input);
   Node fin = start.canonical();
-  cout << unparse(start) << endl;
-  cout << start << ", " << fin << endl;
+  cout << unparse(start) << ", " << unparse(fin) << endl;
   auto path = astar(start, fin);
   // auto path = bfs(start, fin);
 
+  cout << unparse(start) << endl;
   Node n = start;
   for (int i : path) {
+    bool cut = isJoin(n, start, i);
     n = n.flip(i);
-    cout << i << endl;
+    bool join = isJoin(n, fin, i);
+    cout << i << ", " << join << ", " <<  cut << endl;
     cout << unparse(n) << endl;
   }
   cout << path.size() << " steps" << endl;

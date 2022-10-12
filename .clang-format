@@ -1,1 +1,2 @@
 BasedOnStyle: LLVM
+PointerAlignmentStyle: PAS_Left

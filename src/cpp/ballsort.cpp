@@ -321,14 +321,24 @@ int main() {
 
   Solver solver;
   auto root = solver.init(data);
+  // read moves (1-indexed)
+  int a;
+  int b;
+  while (std::cin >> a) {
+    std::cin >> b;
+    root = solver.make_move(root, a - 1, b - 1);
+  }
+
   auto path = solver.bfs(root);
   // astar doesn't actually help much since every move just reduces the
   // heuristic by 1.
   // auto path = solver.astar(root);
 
+  // output moves (1-indexed)
   for (auto [a, b] : path) {
     std::cout << (a + 1) << " " << (b + 1) << std::endl;
   }
+
 
   return 0;
 }
